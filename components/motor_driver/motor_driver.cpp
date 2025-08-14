@@ -1,37 +1,60 @@
 #include "motor_driver.h"
-#include "driver/gpio.h"
-#include "hal/gpio_types.h"
+#include "driver/ledc.h"
+#include "hal/ledc_types.h"
+#include "soc/clk_tree_defs.h"
 
-void motor_driver_init(gpio_num_t pin1, gpio_num_t pin2) {
-  gpio_config_t io_conf_1;
-  io_conf_1.mode = GPIO_MODE_OUTPUT;
-  io_conf_1.pin_bit_mask = (1ULL << pin1);
-  io_conf_1.intr_type = GPIO_INTR_DISABLE;
-  io_conf_1.pull_up_en = GPIO_PULLUP_DISABLE;
-  io_conf_1.pull_down_en = GPIO_PULLDOWN_DISABLE;
+void motor_driver_init() {
+  ledc_timer_config_t ledc_timer = {
+      .speed_mode = LEDC_LOW_SPEED_MODE,
+      .duty_resolution = LEDC_TIMER_8_BIT,
+      .timer_num = LEDC_TIMER_0,
+      .freq_hz = 5000,
+      .clk_cfg = LEDC_AUTO_CLK,
+      .deconfigure = false,
+  };
 
-  gpio_config_t io_conf_2;
-  io_conf_2.mode = GPIO_MODE_OUTPUT;
-  io_conf_2.pin_bit_mask = (1ULL << pin2);
-  io_conf_2.intr_type = GPIO_INTR_DISABLE;
-  io_conf_1.pull_up_en = GPIO_PULLUP_DISABLE;
-  io_conf_1.pull_down_en = GPIO_PULLDOWN_DISABLE;
+  ledc_timer_config(&ledc_timer);
 
-  gpio_config(&io_conf_1);
-  gpio_config(&io_conf_2);
+  ledc_channel_config_t ledc_channel = {
+      .speed_mode = LEDC_LOW_SPEED_MODE,
+      .timer_sel = LEDC_TIMER_0,
+      .duty = 0,
+      .hpoint = 0,
+  };
+
+  // Left motor
+  ledc_channel.channel = MOTOR_LEFT_CHANNEL_PIN1;
+  ledc_channel.gpio_num = MOTOR_LEFT_PIN1;
+  ledc_channel_config(&ledc_channel);
+
+  ledc_channel.channel = MOTOR_LEFT_CHANNEL_PIN2;
+  ledc_channel.gpio_num = MOTOR_LEFT_PIN2;
+  ledc_channel_config(&ledc_channel);
+
+  // Right motor
+  ledc_channel.channel = MOTOR_RIGHT_CHANNEL_PIN1;
+  ledc_channel.gpio_num = MOTOR_RIGHT_PIN1;
+  ledc_channel_config(&ledc_channel);
+
+  ledc_channel.channel = MOTOR_RIGHT_CHANNEL_PIN2;
+  ledc_channel.gpio_num = MOTOR_RIGHT_PIN2;
+  ledc_channel_config(&ledc_channel);
 }
 
-void motor_driver_forward(gpio_num_t pin1, gpio_num_t pin2) {
-  gpio_set_level(pin1, 1);
-  gpio_set_level(pin2, 0);
+void motor_driver_forward(ledc_channel_t channel_pin1,
+                          ledc_channel_t channel_pin2, uint_fast8_t duty) {
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, channel_pin1, duty);
+  ledc_update_duty(LEDC_LOW_SPEED_MODE, channel_pin1);
+
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, channel_pin2, 0);
+  ledc_update_duty(LEDC_LOW_SPEED_MODE, channel_pin2);
 }
 
-void motor_driver_backward(gpio_num_t pin1, gpio_num_t pin2) {
-  gpio_set_level(pin1, 0);
-  gpio_set_level(pin2, 1);
-}
+void motor_driver_backward(ledc_channel_t channel_pin1,
+                           ledc_channel_t channel_pin2, uint_fast8_t duty) {
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, channel_pin1, 0);
+  ledc_update_duty(LEDC_LOW_SPEED_MODE, channel_pin1);
 
-void motor_driver_neutral(gpio_num_t pin1, gpio_num_t pin2) {
-  gpio_set_level(pin1, 0);
-  gpio_set_level(pin2, 0);
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, channel_pin2, duty);
+  ledc_update_duty(LEDC_LOW_SPEED_MODE, channel_pin2);
 }
